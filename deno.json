@@ -1,0 +1,11 @@
+{
+  "name": "@gadicc/ndjson-iterable-stream",
+  "exports": {
+    "./send": "./send/index.ts",
+    "./receive": "./receive/index.ts"
+  },
+  "imports": {
+    "@std/expect": "jsr:@std/expect@^1.0.8",
+    "@std/testing": "jsr:@std/testing@^1.0.5"
+  }
+}
