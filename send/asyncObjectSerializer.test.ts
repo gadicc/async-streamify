@@ -1,20 +1,20 @@
 import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import StreamingSerializer from "./streamingSerializer.ts";
+import AsyncObjectSerializer from "./asyncObjectSerializer.ts";
 import { addTimeout, integers } from "../tests/util.ts";
 
-describe("send/streamingSerializer", () => {
+describe("send/asyncObjectSerializer", () => {
   addTimeout(5000);
 
   it("handles promises", async () => {
     const obj = new Promise((resolve) => resolve("resolved"));
-    const arr = await Array.fromAsync(new StreamingSerializer(obj));
+    const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
     expect(arr).toEqual([{ "$promise": 1 }, [1, "resolved"]]);
   });
 
   it("handles async iterators", async () => {
     const arr = await Array.fromAsync(
-      new StreamingSerializer(integers(3)),
+      new AsyncObjectSerializer(integers(3)),
     );
     expect(arr).toEqual([
       { "$asyncIterator": 1 },
@@ -30,7 +30,7 @@ describe("send/streamingSerializer", () => {
       a: new Promise((resolve) => resolve("resolved")),
       b: new Promise((resolve) => resolve("resolved")),
     };
-    const arr = await Array.fromAsync(new StreamingSerializer(obj));
+    const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
     expect(arr).toEqual([
       { a: { "$promise": 1 }, b: { "$promise": 2 } },
       [1, "resolved"],
@@ -43,7 +43,7 @@ describe("send/streamingSerializer", () => {
       a: integers(3),
       b: integers(3),
     };
-    const arr = await Array.fromAsync(new StreamingSerializer(obj));
+    const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
     expect(arr).toEqual([
       { a: { "$asyncIterator": 1 }, b: { "$asyncIterator": 2 } },
       [1, { done: false, value: 1 }],
@@ -65,7 +65,7 @@ describe("send/streamingSerializer", () => {
         })
       ),
     };
-    const arr = await Array.fromAsync(new StreamingSerializer(obj));
+    const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
     expect(arr).toEqual([
       { promise1: { "$promise": 1 } },
       [1, { promise2: { "$promise": 2 } }],

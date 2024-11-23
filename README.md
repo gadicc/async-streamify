@@ -7,7 +7,7 @@ Copyright (c) 2024 by Gadi Cohen. [MIT Licensed](./LICENSE.txt).
 ## Features
 
 - [x] Supports promises, async iterators and objects containing them.
-- [x] Objects can be (asynchronusly!) nested any number of levels deep.
+- [x] Objects can be (asynchronously!) nested any number of levels deep.
 - [x] Results are sent as they become available, while respecting backpressure.
 - [x] The client receives actual promises, async iterators, etc.
 - [x] Great for sending over HTTP, web workers, and text-based mediums.
@@ -36,12 +36,12 @@ export function GET(request: Request) {
 export type { data };
 
 // client.ts
-import { fromResponse } from "async-streamify";
+import { deserializeResponse } from "async-streamify";
 import type { data } from "./server.ts";
 
-(async() {
+(async () => {
   const response = await fetch("...");
-  const result = await fromResponse<data>(response);
+  const result = await deserializeResponse<data>(response);
 
   result.promise.then((value) => console.log("value")); // "resolved"
 

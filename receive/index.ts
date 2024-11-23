@@ -1,2 +1,5 @@
-export * from "./reassemble.ts";
-export * from "./response.ts";
+export { deserializeResponse } from "./response.ts";
+export {
+  AsyncObjectDeserializer,
+  deserialize,
+} from "./asyncObjectDeserializer.ts";

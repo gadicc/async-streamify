@@ -1,7 +1,7 @@
 import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 
-import reassamble from "./reassemble.ts";
+import reassamble from "./asyncObjectDeserializer.ts";
 import { addTimeout } from "../tests/util.ts";
 
 // Async Iterator From Array
@@ -11,7 +11,7 @@ function aifa(arr: Array<object>) {
   })();
 }
 
-describe("receive/reassemble", () => {
+describe("receive/asyncObjectDeserializer", () => {
   addTimeout(5000);
 
   it("reassembles promises", async () => {
