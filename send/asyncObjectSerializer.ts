@@ -1,24 +1,75 @@
 import BufferedAsyncIterable from "../util/bufferedAsyncIterable.ts";
 import isAsyncIterable from "../util/isAsyncIteratable.ts";
 
+/**
+ * Type for serialized promise references
+ */
+type SerializedPromise = {
+  $promise: number;
+};
+
+/**
+ * Type for serialized async iterator references
+ */
+type SerializedAsyncIterator = {
+  $asyncIterator: number;
+};
+
+/**
+ * Type for an active iterator tracking entry
+ */
+type ActiveIterator = {
+  idx: number;
+  iter: AsyncIterable<unknown>;
+  nextPromise?: Promise<
+    | void
+    | IteratorYieldResult<unknown>
+    | IteratorReturnResult<unknown>
+    | undefined
+  >;
+  done?: boolean;
+};
+
+/**
+ * Serializes objects containing promises and async iterables into a stream of updates.
+ * Handles nested promises, async iterables, and regular object properties.
+ *
+ * @template TSource - The type of the source object being serialized
+ *
+ * @example
+ * ```typescript
+ * const obj = {
+ *   name: "test",
+ *   promise: Promise.resolve(42),
+ *   async *numbers() {
+ *     yield 1;
+ *     yield 2;
+ *   }
+ * };
+ *
+ * const serializer = new AsyncObjectSerializer(obj);
+ *
+ * for await (const update of serializer) {
+ *   console.log(update);
+ *   // Initial: { name: "test", promise: { $promise: 1 }, numbers: { $asyncIterator: 2 } }
+ *   // Promise resolved: [1, 42]
+ *   // Iterator values: [2, { done: false, value: 1 }], [2, { done: false, value: 2 }]
+ *   // Iterator done: [2, { done: true }]
+ * }
+ * ```
+ */
 export class AsyncObjectSerializer<TSource = object>
   extends BufferedAsyncIterable {
   private sourceObject: TSource;
   private serializationIdCounter: number = 1;
   private activeAsyncOperations: number = 0;
-  private activeIterators: Array<{
-    idx: number;
-    iter: AsyncIterable<unknown>;
-    nextPromise?: Promise<
-      | void
-      | IteratorYieldResult<unknown>
-      | IteratorReturnResult<unknown>
-      | undefined
-    >;
-    done?: boolean;
-  }> = [];
+  private activeIterators: Array<ActiveIterator> = [];
 
-  scheduleIteratorUpdates() {
+  /**
+   * Schedules updates for all active async iterators
+   * @returns void
+   */
+  protected scheduleIteratorUpdates(): void {
     for (let i = 0; i < this.activeIterators.length; i++) {
       const thisIter = this.activeIterators[i];
       const { idx, iter, nextPromise, done } = thisIter;
@@ -40,6 +91,10 @@ export class AsyncObjectSerializer<TSource = object>
     }
   }
 
+  /**
+   * Creates a new AsyncObjectSerializer instance
+   * @param object - The source object to serialize
+   */
   constructor(object: TSource) {
     super();
     this.onWait = this.scheduleIteratorUpdates;
@@ -47,31 +102,42 @@ export class AsyncObjectSerializer<TSource = object>
     this.push(this.serializeValue(object));
   }
 
-  private getNextSerializationId() {
+  /**
+   * Gets the next unique serialization ID and increments the active operation count
+   * @returns number
+   */
+  private getNextSerializationId(): number {
     this.activeAsyncOperations++;
     return this.serializationIdCounter++;
   }
 
-  private decrementActiveCount() {
+  /**
+   * Decrements the active operation count and marks as done if no operations remain
+   * @returns void
+   */
+  private decrementActiveCount(): void {
     this.activeAsyncOperations--;
     if (this.activeAsyncOperations === 0) {
       this.done();
     }
   }
 
-  private serializeValue(value: unknown) {
+  /**
+   * Recursively serializes a value, handling promises, async iterables, and nested objects
+   * @param value - The value to serialize
+   * @returns The serialized value
+   */
+  private serializeValue(value: unknown): unknown {
     if (value instanceof Promise) {
       const idx = this.getNextSerializationId();
       value.then((resolved) => {
         this.push([idx, this.serializeValue(resolved)]);
         this.decrementActiveCount();
       });
-      return { $promise: idx };
+      return { $promise: idx } as SerializedPromise;
     }
 
-    if (
-      typeof value !== "object" || value === null || Array.isArray(value)
-    ) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
       return value;
     }
 
@@ -81,12 +147,11 @@ export class AsyncObjectSerializer<TSource = object>
         idx,
         iter: value as AsyncIterable<unknown>,
       });
-      return { $asyncIterator: idx };
+      return { $asyncIterator: idx } as SerializedAsyncIterator;
     }
 
-    const dest = { ...value };
+    const dest: Record<string, unknown> = { ...value };
     for (const [key, val] of Object.entries(value)) {
-      // @ts-expect-error: later
       dest[key] = this.serializeValue(val);
     }
     return dest;
