@@ -32,7 +32,7 @@ export class ReAssembler<T extends object> {
       if (promise) {
         promise.resolve(Promise.resolve(value));
         this.promises.delete(id);
-        return;
+        continue;
       }
 
       const iter = this.iters.get(id);
@@ -84,6 +84,7 @@ export function reassemble<T extends object>(
   iter: AsyncIterable<object>,
 ) {
   const reassembler = new ReAssembler<T>(iter);
+
   return new Promise<T>((resolve) => {
     reassembler.onSetRoot = resolve;
     reassembler.reassemble(); // don't await
