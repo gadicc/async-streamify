@@ -15,47 +15,39 @@ Copyright (c) 2024 by Gadi Cohen. [MIT Licensed](./LICENSE.txt).
 Spend less time thinking about how to resolve and send data over HTTP by working
 with native promises and async iterators over the wire.
 
+Note: streaming is one way only. Async generators yield as fast as the _stream_
+can handle, and not when called on the client. Strictly speaking this means we
+are not spec-compliant, but in practice, this is what most people need / want.
+
 ## Quick Start
 
-**server.ts**
-
 ```ts
-import { AsyncResponse } from "@gadicc/async-streamify/send";
+// deno-fmt-ignore-file
 
-// Hand this over to the the framework of your choice
+// server.ts
+import { AsyncResponse } from "async-streamify";
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+async function* integers(max = 10) { let i=0; while (i<=max) { yield i++; await sleep(200); }}
+const data = () => ({ promise: sleep(100).then(()=>"resolved"), integers: integers(10) });
+
 export function GET(request: Request) {
-  const object = {
-    promise: new Promise((resolve) => resolve("resolved")),
-    iterable: integers(5), // generator yielding 1, 2, 3, 4, 5,
-    nested: {
-      // nested promise returning a nested async iterable
-      integersPromise: new Promise((resolve) => { integers: resolve(integers(5)) });
-    }
-  }
-
-  // Sugar to return a new `Response` with correct headers and types;
-  // see docs for more control.
-  return new AsyncResponse(object);
+  return new AsyncResponse(data());
 }
-```
+export type { data };
 
-**client.ts**
-
-```ts
-import { reassembleResponse } from "@gadicc/async-streamify/receive";
+// client.ts
+import { fromResponse } from "async-streamify";
+import type { data } from "./server.ts";
 
 (async() {
   const response = await fetch("...");
-  const result = await reassembleResponse(response);
+  const result = await fromResponse<data>(response);
 
-  // { promise: Promise, iterable: AsyncIterable, nested: { integersPromise: Promise } }
-  result;
+  result.promise.then((value) => console.log("value")); // "resolved"
 
-  await result.promise; // "resolved"
-  await Array.fromAsync(result.iterable); // [1, 2, 3, 4, 5];
-
-  const integers = await result.nested.integersPromise;  
-  for await (const integer of integers)
+  for await (const integer of result.integers)
     console.log(integer); // 1, 2, 3, 4, 5
+
+  // Full console output in order: 1, "resolved", 2, 3, 4, 5
 })();
 ```

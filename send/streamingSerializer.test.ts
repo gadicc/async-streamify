@@ -1,34 +1,10 @@
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import StreamingSerializer from "./streamingSerializer.ts";
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function* integers(max = 10, delay = 0) {
-  let i = 1;
-  while (i <= max) {
-    // console.log(`yielding ${i}`);
-    yield i++;
-
-    if (delay) await sleep(delay);
-  }
-}
+import { addTimeout, integers } from "../tests/util.ts";
 
 describe("send/streamingSerializer", () => {
-  // https://github.com/denoland/deno/issues/11133#issuecomment-1984925632
-  const timeoutMs = 5000;
-  let timeoutId: number;
-  beforeEach(() => {
-    timeoutId = setTimeout(() => {
-      throw new Error(`Timed out after ${timeoutMs} ms.`);
-    }, timeoutMs);
-  });
-  afterEach(() => {
-    clearTimeout(timeoutId);
-  });
-  // --- //
+  addTimeout(5000);
 
   it("handles promises", async () => {
     const obj = new Promise((resolve) => resolve("resolved"));
@@ -37,7 +13,9 @@ describe("send/streamingSerializer", () => {
   });
 
   it("handles async iterators", async () => {
-    const arr = await Array.fromAsync(new StreamingSerializer(integers(3)));
+    const arr = await Array.fromAsync(
+      new StreamingSerializer(integers(3)),
+    );
     expect(arr).toEqual([
       { "$asyncIterator": 1 },
       [1, { done: false, value: 1 }],

@@ -1,6 +1,7 @@
 {
   "name": "@gadicc/ndjson-iterable-stream",
   "exports": {
+    ".": "./index.ts",
     "./send": "./send/index.ts",
     "./receive": "./receive/index.ts"
   },

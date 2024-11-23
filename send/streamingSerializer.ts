@@ -1,8 +1,8 @@
 import PushableAsyncIterable from "../util/pushableAsyncIterable.ts";
 import isAsyncIterator from "../util/isAsyncIterator.ts";
 
-export class StreamingSerializer extends PushableAsyncIterable {
-  object: object;
+export class StreamingSerializer<T = object> extends PushableAsyncIterable {
+  object: T;
   counter: number = 1;
   busyCount: number = 0;
   iters: Array<{
@@ -39,7 +39,7 @@ export class StreamingSerializer extends PushableAsyncIterable {
     }
   }
 
-  constructor(object: object) {
+  constructor(object: T) {
     super();
     this.onWait = this.queueNexts;
     this.object = object;

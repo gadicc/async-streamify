@@ -1,3 +1,5 @@
+import PushableAsyncIterable from "../util/pushableAsyncIterable.ts";
+
 export class ReAssembler<T extends object> {
   iter: AsyncIterable<object>;
   root?: T;
@@ -5,6 +7,7 @@ export class ReAssembler<T extends object> {
     number,
     { resolve: (value: object) => void; reject: (reason?: unknown) => void }
   > = new Map();
+  iters: Map<number, PushableAsyncIterable> = new Map();
   onSetRoot?: (root: T) => void;
 
   constructor(iter: AsyncIterable<object>) {
@@ -23,10 +26,27 @@ export class ReAssembler<T extends object> {
 
       const [id, value] = item as [number, object];
 
+      // TODO, let's have one map for both promises and iters
+
       const promise = this.promises.get(id);
       if (promise) {
         promise.resolve(Promise.resolve(value));
         this.promises.delete(id);
+        return;
+      }
+
+      const iter = this.iters.get(id);
+      if (iter) {
+        const { done, value: thisValue } = value as {
+          done: boolean;
+          value: unknown;
+        };
+        if (done) {
+          iter.done();
+        } else {
+          iter.push(thisValue);
+        }
+        continue;
       }
     }
 
@@ -41,6 +61,13 @@ export class ReAssembler<T extends object> {
         return new Promise((resolve, reject) => {
           this.promises.set(id, { resolve, reject });
         });
+      }
+
+      if ("$asyncIterator" in item) {
+        const id = item["$asyncIterator"] as number;
+        const iter = new PushableAsyncIterable();
+        this.iters.set(id, iter);
+        return iter;
       }
     }
 

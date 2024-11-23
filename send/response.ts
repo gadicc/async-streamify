@@ -1,4 +1,4 @@
-import transformIterable from "../lib/util/transformIterable";
+import transformIterable from "../util/transformIterable.ts";
 import StreamingSerializer from "./streamingSerializer.ts";
 
 export class AsyncResponse extends Response {
@@ -24,12 +24,16 @@ export class AsyncResponse extends Response {
     }
     headers.set("Content-Type", "application/x-ndjson; charset=utf-8");
 
-    const streamingSerializer = new StreamingSerializer(body);
-    const ndJsonStream = transformIterable(
-      streamingSerializer,
-      (item: object) => JSON.stringify(item) + "\n",
-    );
+    const encoder = new TextEncoder();
 
+    const streamingSerializer = new StreamingSerializer(body);
+    const ndJsonStream = ReadableStream.from(transformIterable(
+      // @ts-expect-error: later
+      streamingSerializer,
+      (item: object) => encoder.encode(JSON.stringify(item) + "\n"),
+    ));
+
+    // @ts-expect-error: later
     super(ndJsonStream, init);
   }
 }

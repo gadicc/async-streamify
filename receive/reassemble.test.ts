@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 
 import reassamble from "./reassemble.ts";
+import { addTimeout } from "../tests/util.ts";
 
 // Async Iterator From Array
 function aifa(arr: Array<object>) {
@@ -11,18 +12,7 @@ function aifa(arr: Array<object>) {
 }
 
 describe("receive/reassemble", () => {
-  // https://github.com/denoland/deno/issues/11133#issuecomment-1984925632
-  const timeoutMs = 5000;
-  let timeoutId: number;
-  beforeEach(() => {
-    timeoutId = setTimeout(() => {
-      throw new Error(`Timed out after ${timeoutMs} ms.`);
-    }, timeoutMs);
-  });
-  afterEach(() => {
-    clearTimeout(timeoutId);
-  });
-  // --- //
+  addTimeout(5000);
 
   it("reassembles promises", async () => {
     // Since resolve() awaits chained promises, we get final value not a promise
@@ -43,5 +33,19 @@ describe("receive/reassemble", () => {
     );
     expect(result.promise).toBeInstanceOf(Promise);
     expect(result.promise).resolves.toBe("resolved");
+  });
+
+  it("reassembles iterables", async () => {
+    const result = await reassamble(
+      aifa([
+        { "$asyncIterator": 1 },
+        [1, { done: false, value: 1 }],
+        [1, { done: false, value: 2 }],
+        [1, { done: false, value: 3 }],
+        [1, { done: true, value: undefined }],
+      ]),
+    );
+    // @ts-expect-error: later
+    expect(await Array.fromAsync(result)).toEqual([1, 2, 3]);
   });
 });

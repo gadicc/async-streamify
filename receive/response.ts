@@ -20,7 +20,7 @@ export async function* ndjsonStreamer(response: Response) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    buffer += decoder.decode(value);
+    buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
     buffer = lines.pop() as string;
 
@@ -30,6 +30,6 @@ export async function* ndjsonStreamer(response: Response) {
   }
 }
 
-export function reassembleResponse(response: Response) {
-  return reassemble(ndjsonStreamer(response));
+export function fromResponse<T extends object>(response: Response) {
+  return reassemble<T>(ndjsonStreamer(response));
 }
