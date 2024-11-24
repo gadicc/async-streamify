@@ -20,10 +20,10 @@ export default {
   plugins: [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
+    "@sebbo2002/semantic-release-jsr",
     ["@semantic-release/npm", {
       pkgRoot: "dist/npm",
     }],
-    "@sebbo2002/semantic-release-jsr",
     "@semantic-release/github",
   ],
   preset: "conventionalcommits",
