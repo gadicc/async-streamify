@@ -1,9 +1,9 @@
 import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 
-import { AsyncResponse, deserializeResponse } from "../index.ts";
+import { AsyncResponse, deserializeResponse } from "../lib/index.ts";
 import { makeControllablePromise } from "./util.ts";
-import BufferedAsyncIterable from "../util/bufferedAsyncIterable.ts";
+import BufferedAsyncIterable from "../lib/util/bufferedAsyncIterable.ts";
 
 describe("tests/e2e", () => {
   it("works", async () => {

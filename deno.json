@@ -1,12 +1,24 @@
 {
   "name": "@gadicc/ndjson-iterable-stream",
+  "version": "0.0.1",
+  "license": "MIT",
   "exports": {
-    ".": "./index.ts",
-    "./send": "./send/index.ts",
-    "./receive": "./receive/index.ts"
+    ".": "./lib/index.ts",
+    "./send": "./lib/send/index.ts",
+    "./receive": "./lib/receive/index.ts"
+  },
+  "tasks": {
+    "ci": "deno check lib/* && deno lint lib/* && deno task coverage",
+    "coverage": "deno test --coverage=cov_profile && deno coverage cov_profile",
+    "build:npm": "deno run -A scripts/build-npm.ts"
   },
   "imports": {
+    "@deno/dnt": "jsr:@deno/dnt@^0.41.3",
     "@std/expect": "jsr:@std/expect@^1.0.8",
-    "@std/testing": "jsr:@std/testing@^1.0.5"
+    "@std/testing": "jsr:@std/testing@^1.0.5",
+    "semantic-release": "npm:semantic-release@^24.1.2"
+  },
+  "publish": {
+    "include": ["lib", "README.md", "LICENSE.txt"]
   }
 }

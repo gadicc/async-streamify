@@ -1,7 +1,7 @@
 import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import AsyncObjectSerializer from "./asyncObjectSerializer.ts";
-import { addTimeout, integers } from "../tests/util.ts";
+import { addTimeout, integers } from "../../tests/util.ts";
 
 describe("send/asyncObjectSerializer", () => {
   addTimeout(5000);

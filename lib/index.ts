@@ -55,7 +55,7 @@
  * For lower-level control, you can use the serializer/deserializer directly:
  *
  * ```typescript
- * import { AsyncObjectSerializer, deserialize } from "./mod.ts";
+ * import { AsyncObjectSerializer, deserialize } from "async-streamify";
  *
  * const obj = {
  *   value: Promise.resolve(42),

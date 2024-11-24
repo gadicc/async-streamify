@@ -1,9 +1,16 @@
 # async-streamify
 
-_Stream and serialize nested promises and async iterables over HTTP and other
-protocols_
+_Stream and serialize nested promises and async iterables over HTTP, workers,
+etc_
 
-[![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE.txt)
+[![NPM Version](https://img.shields.io/npm/v/async-streamify?logo=npm)](https://www.npmjs.com/package/async-streamify)
+[![JSR](https://jsr.io/badges/@gadicc/async-streamify)](https://jsr.io/@gadicc/async-streamify)
+[![JSR Score](https://jsr.io/badges/@gadicc/async-streamify/score)](https://jsr.io/@gadicc/async-streamify)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/gadicc/async-streamify/release.yml)
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/gadicc/0dce97d506b630be1f1d601a9906de5c/raw/async-streamify-lcov-coverage.json)
+[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
+[![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 `async-streamify` enables seamless transmission of complex async objects
 (including promises and async iterators) over HTTP and other text-based

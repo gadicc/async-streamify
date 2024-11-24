@@ -2,7 +2,7 @@ import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 
 import reassamble from "./asyncObjectDeserializer.ts";
-import { addTimeout } from "../tests/util.ts";
+import { addTimeout } from "../../tests/util.ts";
 
 // Async Iterator From Array
 function aifa(arr: Array<object>) {
