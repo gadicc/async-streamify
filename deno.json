@@ -1,5 +1,5 @@
 {
-  "name": "@gadicc/ndjson-iterable-stream",
+  "name": "@gadicc/async-streamify",
   "version": "0.0.1",
   "license": "MIT",
   "exports": {
