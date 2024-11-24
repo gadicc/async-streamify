@@ -118,7 +118,7 @@ export class AsyncObjectSerializer<TSource = object>
   private decrementActiveCount(): void {
     this.activeAsyncOperations--;
     if (this.activeAsyncOperations === 0) {
-      this.done();
+      this.close();
     }
   }
 

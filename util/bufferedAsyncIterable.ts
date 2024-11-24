@@ -11,6 +11,7 @@
  * // Push values
  * buffer.push(1);
  * buffer.push(2);
+ * buffer.close(); // Below will keep awaiting until this is called.
  *
  * // Consume values
  * for await (const value of buffer) {
@@ -21,7 +22,7 @@
 export default class BufferedAsyncIterable<T = unknown> {
   private buffer: Array<T> = [];
   private resolvers: Array<(value: IteratorResult<T>) => void> = [];
-  protected isDone: boolean = false;
+  protected isClosed: boolean = false;
 
   /**
    * Optional callback that is invoked when a consumer is waiting for values
@@ -48,8 +49,8 @@ export default class BufferedAsyncIterable<T = unknown> {
    *
    * @returns void
    */
-  done(): void {
-    this.isDone = true;
+  close(): void {
+    this.isClosed = true;
     for (const resolver of this.resolvers) {
       resolver({ value: undefined, done: true });
     }
@@ -62,26 +63,17 @@ export default class BufferedAsyncIterable<T = unknown> {
    *
    * @returns Promise<IteratorResult<T>>
    */
-  wait(): Promise<IteratorResult<T>> {
-    if (this.onWait) this.onWait();
+  next(): Promise<IteratorResult<T>> {
     return new Promise<IteratorResult<T>>((resolve) => {
       if (this.buffer.length) {
         resolve({ value: this.buffer.shift()!, done: false });
-      } else if (this.isDone) {
+      } else if (this.isClosed) {
         resolve({ value: undefined, done: true });
       } else {
         this.resolvers.push(resolve);
+        if (this.onWait) this.onWait();
       }
     });
-  }
-
-  /**
-   * Removes and returns the first value in the buffer
-   *
-   * @returns T | undefined
-   */
-  pop(): T | undefined {
-    return this.buffer.shift();
   }
 
   /**
@@ -91,7 +83,7 @@ export default class BufferedAsyncIterable<T = unknown> {
    */
   [Symbol.asyncIterator](): AsyncIterator<T> {
     return {
-      next: () => this.wait(),
+      next: this.next.bind(this),
     };
   }
 }

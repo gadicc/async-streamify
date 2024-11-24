@@ -95,7 +95,7 @@ export class AsyncObjectDeserializer<TTarget extends object> {
           value: unknown;
         };
         if (done) {
-          iter.done();
+          iter.close();
         } else {
           iter.push(iterValue);
         }
