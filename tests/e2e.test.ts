@@ -1,33 +1,32 @@
-import { assertEquals } from "https://deno.land/std@0.201.0/assert/mod.ts";
+import { describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
+
 import { AsyncResponse, deserializeResponse } from "../index.ts";
+import { makeControllablePromise } from "./util.ts";
+import BufferedAsyncIterable from "../util/bufferedAsyncIterable.ts";
 
-Deno.test("async-streamify e2e", async () => {
-  const sleep = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-  async function* integers(max = 10) {
-    let i = 0;
-    while (i <= max) {
-      yield i++;
-      await sleep(200);
+describe("tests/e2e", () => {
+  it("works", async () => {
+    const { promise, resolve } = makeControllablePromise<string>();
+    const iterable = new BufferedAsyncIterable<number>();
+
+    const data = { promise, iterable };
+    const response = new AsyncResponse(data);
+    const result = await deserializeResponse<typeof data>(response);
+
+    iterable.push(1);
+    resolve("resolved");
+    iterable.push(2);
+    iterable.push(3);
+    iterable.close();
+
+    const output: (string | number)[] = [];
+    result.promise.then((value) => output.push(value));
+
+    for await (const value of result.iterable) {
+      output.push(value);
     }
-  }
 
-  const data = () => ({
-    promise: sleep(100).then(() => "resolved"),
-    integers: integers(3),
+    expect(output).toEqual([1, "resolved", 2, 3]);
   });
-
-  type Data = ReturnType<typeof data>;
-
-  const response = new AsyncResponse(data());
-  const result = await deserializeResponse<Data>(response);
-
-  assertEquals(await result.promise, "resolved");
-
-  const numbers: number[] = [];
-  for await (const value of result.integers) {
-    numbers.push(value);
-  }
-
-  assertEquals(numbers, [0, 1, 2, 3]);
 });
