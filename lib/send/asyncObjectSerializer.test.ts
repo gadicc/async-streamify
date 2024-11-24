@@ -2,6 +2,7 @@ import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import AsyncObjectSerializer from "./asyncObjectSerializer.ts";
 import { addTimeout, integers } from "../../tests/util.ts";
+import transformIterable from "../util/transformIterable.ts";
 
 describe("send/asyncObjectSerializer", () => {
   addTimeout(5000);
@@ -71,5 +72,94 @@ describe("send/asyncObjectSerializer", () => {
       [1, { promise2: { "$promise": 2 } }],
       [2, "resolved"],
     ]);
+  });
+
+  it("handles backpressure (single iterators)", async () => {
+    const yielded: number[] = [];
+    const iterable = transformIterable(integers(3), (value: number) => {
+      yielded.push(value);
+      return value;
+    });
+
+    const serializer = new AsyncObjectSerializer(iterable);
+
+    const _root = await serializer.next();
+    expect(yielded).toEqual([]);
+
+    await serializer.next();
+    expect(yielded).toEqual([1]);
+
+    await serializer.next();
+    expect(yielded).toEqual([1, 2]);
+  });
+
+  it.skip("handles backpressure (multiple simultaneous iterators - onWait)", async () => {
+    const yielded: number[] = [];
+    const received: number[] = [];
+
+    const iterable1 = transformIterable(integers(2), (value: number) => {
+      yielded.push(value);
+      return value;
+    });
+    const iterable2 = transformIterable(integers(2), (value: number) => {
+      yielded.push(value);
+      return value;
+    });
+
+    const serializer = new AsyncObjectSerializer({ iterable1, iterable2 });
+    const _root = await serializer.next();
+    const getNext = async () =>
+      received.push((await serializer.next()).value[1].value as number);
+
+    await getNext();
+    expect(received).toEqual([1]);
+    expect(yielded).toEqual([1, 1]);
+
+    await getNext();
+    expect(received).toEqual([1, 1]);
+    expect(yielded).toEqual([1, 1]);
+
+    await getNext();
+    expect(received).toEqual([1, 1, 2]);
+    expect(yielded).toEqual([1, 1, 2, 2]);
+
+    await getNext();
+    expect(received).toEqual([1, 1, 2, 2]);
+    expect(yielded).toEqual([1, 1, 2, 2]);
+  });
+
+  it("handles backpressure (multiple simultaneous iterators - onNext)", async () => {
+    const yielded: number[] = [];
+    const received: number[] = [];
+
+    const iterable1 = transformIterable(integers(2), (value: number) => {
+      yielded.push(value);
+      return value;
+    });
+    const iterable2 = transformIterable(integers(2), (value: number) => {
+      yielded.push(value);
+      return value;
+    });
+
+    const serializer = new AsyncObjectSerializer({ iterable1, iterable2 });
+    const _root = await serializer.next();
+    const getNext = async () =>
+      received.push((await serializer.next()).value[1].value as number);
+
+    await getNext();
+    expect(received).toEqual([1]);
+    expect(yielded).toEqual([1, 1]);
+
+    await getNext();
+    expect(received).toEqual([1, 1]);
+    expect(yielded).toEqual([1, 1, 2, 2]);
+
+    await getNext();
+    expect(received).toEqual([1, 1, 2]);
+    expect(yielded).toEqual([1, 1, 2, 2]);
+
+    await getNext();
+    expect(received).toEqual([1, 1, 2, 2]);
+    expect(yielded).toEqual([1, 1, 2, 2]);
   });
 });

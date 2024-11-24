@@ -97,8 +97,14 @@ export class AsyncObjectSerializer<TSource = object>
    */
   constructor(object: TSource) {
     super();
-    this.onWait = this.scheduleIteratorUpdates;
     this.sourceObject = object;
+
+    // Option 1) queue all next()'s only when buffer is empty
+    // this.onWait = this.scheduleIteratorUpdates;
+
+    // Option 2) queue all next()'s on every next call = faster streaming
+    this.onNext = this.scheduleIteratorUpdates;
+
     this.push(this.serializeValue(object));
   }
 

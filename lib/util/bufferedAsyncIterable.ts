@@ -30,6 +30,11 @@ export default class BufferedAsyncIterable<T = unknown> {
   onWait?: () => void;
 
   /**
+   * Optional callback that is invoked when a consumer calls `next()`
+   */
+  onNext?: () => void;
+
+  /**
    * Pushes a new value into the buffer.
    * If there are waiting consumers, the first one will be resolved with this value.
    *
@@ -64,6 +69,7 @@ export default class BufferedAsyncIterable<T = unknown> {
    * @returns Promise<IteratorResult<T>>
    */
   next(): Promise<IteratorResult<T>> {
+    if (this.onNext) this.onNext();
     return new Promise<IteratorResult<T>>((resolve) => {
       if (this.buffer.length) {
         resolve({ value: this.buffer.shift()!, done: false });
