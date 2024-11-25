@@ -114,6 +114,15 @@ export class AsyncObjectDeserializer<TTarget extends object> {
    * @returns The deserialized value
    */
   private deserializeValue<I extends object>(serializedValue: I): unknown {
+    // Return primitives as-is: null, undefined, numbers, strings, etc.
+    if (typeof serializedValue !== "object" || serializedValue === null) {
+      return serializedValue;
+    }
+
+    if (Array.isArray(serializedValue)) {
+      return serializedValue.map((value) => this.deserializeValue(value));
+    }
+
     const keys = Object.keys(serializedValue);
     if (keys.length === 1) {
       if ("$promise" in serializedValue) {
@@ -132,15 +141,12 @@ export class AsyncObjectDeserializer<TTarget extends object> {
       }
     }
 
-    const dest: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(serializedValue)) {
-      if (value && typeof value === "object") {
-        dest[key] = this.deserializeValue(value as object);
-      } else {
-        dest[key] = value;
-      }
-    }
-    return dest;
+    return Object.fromEntries(
+      Object.entries(serializedValue).map(([key, value]) => [
+        key,
+        this.deserializeValue(value as object),
+      ]),
+    );
   }
 }
 

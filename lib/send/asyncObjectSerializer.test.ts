@@ -7,6 +7,12 @@ import transformIterable from "../util/transformIterable.ts";
 describe("send/asyncObjectSerializer", () => {
   addTimeout(5000);
 
+  it("handle regular sync arrays", async () => {
+    const arrIn = [1, 2, 3];
+    const arrOut = await Array.fromAsync(new AsyncObjectSerializer(arrIn));
+    expect(arrOut).toEqual([arrIn]);
+  });
+
   it("handles promises", async () => {
     const obj = new Promise((resolve) => resolve("resolved"));
     const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
@@ -23,6 +29,16 @@ describe("send/asyncObjectSerializer", () => {
       [1, { done: false, value: 2 }],
       [1, { done: false, value: 3 }],
       [1, { done: true, value: undefined }],
+    ]);
+  });
+
+  it("handle arrays of promises", async () => {
+    const arrIn = [Promise.resolve(1), 2, Promise.resolve(3)];
+    const arrOut = await Array.fromAsync(new AsyncObjectSerializer(arrIn));
+    expect(arrOut).toEqual([
+      [{ $promise: 1 }, 2, { $promise: 2 }],
+      [1, 1],
+      [2, 3],
     ]);
   });
 

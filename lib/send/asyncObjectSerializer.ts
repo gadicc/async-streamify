@@ -106,6 +106,9 @@ export class AsyncObjectSerializer<TSource = object>
     this.onNext = this.scheduleIteratorUpdates;
 
     this.push(this.serializeValue(object));
+    if (this.activeAsyncOperations === 0) {
+      this.close();
+    }
   }
 
   /**
@@ -134,6 +137,15 @@ export class AsyncObjectSerializer<TSource = object>
    * @returns The serialized value
    */
   private serializeValue(value: unknown): unknown {
+    // Return primitives as-is: null, undefined, numbers, strings, etc.
+    if (typeof value !== "object" || value === null) {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((val) => this.serializeValue(val));
+    }
+
     if (value instanceof Promise) {
       const idx = this.getNextSerializationId();
       value.then((resolved) => {
@@ -141,10 +153,6 @@ export class AsyncObjectSerializer<TSource = object>
         this.decrementActiveCount();
       });
       return { $promise: idx } as SerializedPromise;
-    }
-
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      return value;
     }
 
     if (isAsyncIterable(value)) {
@@ -156,11 +164,11 @@ export class AsyncObjectSerializer<TSource = object>
       return { $asyncIterator: idx } as SerializedAsyncIterator;
     }
 
-    const dest: Record<string, unknown> = { ...value };
-    for (const [key, val] of Object.entries(value)) {
-      dest[key] = this.serializeValue(val);
-    }
-    return dest;
+    return Object.fromEntries(
+      Object.entries(value).map((
+        [key, val],
+      ) => [key, this.serializeValue(val)]),
+    );
   }
 }
 

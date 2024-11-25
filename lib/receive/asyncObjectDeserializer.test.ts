@@ -14,6 +14,11 @@ function aifa(arr: Array<object>) {
 describe("receive/asyncObjectDeserializer", () => {
   addTimeout(5000);
 
+  it("handle regular sync arrays", async () => {
+    const result = await reassamble(aifa([[1, 2, 3]]));
+    expect(result).toEqual([1, 2, 3]);
+  });
+
   it("reassembles promises", async () => {
     // Since resolve() awaits chained promises, we get final value not a promise
     const result = await reassamble(aifa([{ "$promise": 1 }, [1, "resolved"]]));
@@ -33,6 +38,18 @@ describe("receive/asyncObjectDeserializer", () => {
     );
     expect(result.promise).toBeInstanceOf(Promise);
     expect(result.promise).resolves.toBe("resolved");
+  });
+
+  it("reassembles arrays of promises", async () => {
+    const result = await reassamble<Array<number | Promise<number>>>(aifa([
+      [{ $promise: 1 }, 2, { $promise: 2 }],
+      [1, 1],
+      [2, 3],
+    ]));
+
+    expect(result[0]).resolves.toBe(1);
+    expect(result[1]).toBe(2);
+    expect(result[2]).resolves.toBe(3);
   });
 
   it("reassembles iterables", async () => {
