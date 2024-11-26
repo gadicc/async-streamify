@@ -16,7 +16,27 @@ describe("send/asyncObjectSerializer", () => {
   it("handles promises", async () => {
     const obj = new Promise((resolve) => resolve("resolved"));
     const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
-    expect(arr).toEqual([{ "$promise": 1 }, [1, "resolved"]]);
+    expect(arr).toEqual([{ "$promise": 1 }, [1, { $resolve: "resolved" }]]);
+  });
+
+  it("handles promise rejections (instanceof Error)", async () => {
+    const obj = new Promise((_, reject) => reject(new Error("rejected")));
+    const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
+    expect(arr).toEqual([{ "$promise": 1 }, [1, {
+      $reject: {
+        $error: {
+          name: "Error",
+          message: "rejected",
+          stack: expect.any(String),
+        },
+      },
+    }]]);
+  });
+
+  it("handles promise rejections (non-error)", async () => {
+    const obj = new Promise((_, reject) => reject("rejected"));
+    const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
+    expect(arr).toEqual([{ "$promise": 1 }, [1, { $reject: "rejected" }]]);
   });
 
   it("handles async iterators", async () => {
@@ -37,8 +57,8 @@ describe("send/asyncObjectSerializer", () => {
     const arrOut = await Array.fromAsync(new AsyncObjectSerializer(arrIn));
     expect(arrOut).toEqual([
       [{ $promise: 1 }, 2, { $promise: 2 }],
-      [1, 1],
-      [2, 3],
+      [1, { $resolve: 1 }],
+      [2, { $resolve: 3 }],
     ]);
   });
 
@@ -50,8 +70,8 @@ describe("send/asyncObjectSerializer", () => {
     const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
     expect(arr).toEqual([
       { a: { "$promise": 1 }, b: { "$promise": 2 } },
-      [1, "resolved"],
-      [2, "resolved"],
+      [1, { $resolve: "resolved" }],
+      [2, { $resolve: "resolved" }],
     ]);
   });
 
@@ -85,8 +105,8 @@ describe("send/asyncObjectSerializer", () => {
     const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
     expect(arr).toEqual([
       { promise1: { "$promise": 1 } },
-      [1, { promise2: { "$promise": 2 } }],
-      [2, "resolved"],
+      [1, { $resolve: { promise2: { "$promise": 2 } } }],
+      [2, { $resolve: "resolved" }],
     ]);
   });
 

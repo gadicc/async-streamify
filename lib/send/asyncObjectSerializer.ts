@@ -1,5 +1,6 @@
 import BufferedAsyncIterable from "../util/bufferedAsyncIterable.ts";
 import isAsyncIterable from "../util/isAsyncIteratable.ts";
+import * as errorKind from "../kinds/error.ts";
 
 /**
  * Type for serialized promise references
@@ -149,7 +150,10 @@ export class AsyncObjectSerializer<TSource = object>
     if (value instanceof Promise) {
       const idx = this.getNextSerializationId();
       value.then((resolved) => {
-        this.push([idx, this.serializeValue(resolved)]);
+        this.push([idx, { $resolve: this.serializeValue(resolved) }]);
+      }).catch((error) => {
+        this.push([idx, { $reject: errorKind.maybeSerialize(error) }]);
+      }).finally(() => {
         this.decrementActiveCount();
       });
       return { $promise: idx } as SerializedPromise;

@@ -1,10 +1,11 @@
 import BufferedAsyncIterable from "../util/bufferedAsyncIterable.ts";
+import * as errorKind from "../kinds/error.ts";
 
 /**
  * Type for a promise resolution handler
  */
 type PromiseHandler = {
-  resolve: (value: object) => void;
+  resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
 };
 
@@ -83,7 +84,12 @@ export class AsyncObjectDeserializer<TTarget extends object> {
 
       const promise = this.promises.get(id);
       if (promise) {
-        promise.resolve(Promise.resolve(value));
+        if ("$resolve" in value) promise.resolve(value["$resolve"]);
+        else if ("$reject" in value) {
+          promise.reject(errorKind.maybeDeserialize(value["$reject"]));
+        } else {throw new Error(
+            "Unexpected promise state: " + JSON.stringify(value),
+          );}
         this.promises.delete(id);
         continue;
       }

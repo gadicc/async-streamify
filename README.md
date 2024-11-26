@@ -182,6 +182,15 @@ chunk is a valid JSON object terminated by a newline character. This format is:
 
 - Async generators on the client yield as fast as the stream can handle, not
   when explicitly requested
+- Because of how **promise chains** work, if you provide a promise as the only
+  item to serialize, if you call `await reassemble(...)` you'll get the result
+  or thrown error back, not a promise. To work around, simply nest it, e.g.
+  `{ promise: new Promise() }`.
+- Errors in promise rejections are (de-serialized), and `error instanceof Error`
+  works. But obviously instances of custom errors cannot be sent over the wire,
+  so instead check if `error.name === "CustomError"` vs
+  ~~`error instanceof CustomError`~~, etc.
+- Errors in async generators are not handled yet (TODO)
 - Circular references are not supported
 - WebSocket and bi-directional streaming are not currently supported
 - The transport must support streaming and handle backpressure correctly
