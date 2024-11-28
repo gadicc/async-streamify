@@ -62,6 +62,7 @@ export class AsyncResponse extends Response {
         headers: {
           ...init.headers,
           "content-type": "application/x-ndjson",
+          // consider: "cache-control": "no-cache", // Recommended for streaming responses
         },
       },
     );

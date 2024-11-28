@@ -16,6 +16,13 @@ export function testNative(target: unknown): boolean {
 }
 
 export function serialize(target: Error): SerializedError {
+  /*
+    // consider something like: (for additional properties?)
+    Object.getOwnPropertyNames(value).forEach(function (propName) {
+        error[propName] = value[propName];
+    });
+    //
+  */
   return {
     $error: {
       name: target.name,
