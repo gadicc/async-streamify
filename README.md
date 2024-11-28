@@ -19,61 +19,42 @@ protocols, while maintaining their async behavior on the receiving end.
 ## Features
 
 - ✨ Stream promises and async iterators as they resolve/yield
-- 🔄 Support for deeply nested async objects
-- 🌊 Automatic backpressure handling
+- 🚀 Receive native promises and async iterables on the client
+- 🔄 Support for deeply nested async objects (iterable in a promise, etc)
 - 🎯 Type-safe serialization and deserialization
-- 🚀 Native promise and async iterator behavior on the client
+- 🌊 Automatic backpressure handling
 - 📦 Zero dependencies
-- 🛡️ Works with Deno and Node.js
+- 🛡️ Works in all modern runtimes (browser, bun, deno, node, edge).
 
 ## Installation
 
-### Deno
-
-```typescript
-import {
-  AsyncResponse,
-  deserializeResponse,
-} from "https://deno.land/x/async_streamify/mod.ts";
-```
-
-### Node.js
-
-```bash
-npm install async-streamify
-```
-
-```typescript
-import { AsyncResponse, deserializeResponse } from "async-streamify";
-```
+- From [npm](https://www.npmjs.com/package/async-streamify) with `bun add` |
+  `deno add` | `npm install` | `pnpm add` | `yarn add` and `async-streamify`.
+- From [jsr](https://jsr.io/@gadicc/async-streamify) with `deno` | `npx jsr` |
+  `yarn dlx jsr` | `pnpm dlx jsr` | `bunx jsr` and
+  `add gadicc:@async-streamify`.
 
 ## Quick Start
 
-### Server
+**`server.ts`**
 
 ```typescript
 import { AsyncResponse } from "async-streamify";
 
-// Helper functions
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-async function* integers(max = 10) {
-  let i = 0;
-  while (i <= max) {
-    yield i++;
-    await sleep(200); // Simulate work
-  }
-}
+// Helper functions; integers() generates a new integer every 200ms.
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)); // deno-fmt-ignore
+async function* integers(max=10) { let i=0; while (i <= max) { yield i++; await sleep(200); }}
 
 // Create an object with mixed async values
 const data = () => ({
-  status: "processing",
+  availability: "immediate",
   promise: sleep(100).then(() => "completed"),
-  stream: integers(5),
+  stream: integers(3),
   nested: {
-    deepPromise: Promise.resolve("I'm deep!"),
-    deepStream: integers(3),
+    iteratorInPromise: sleep(100).then(() => integers(3)),
   },
 });
+export type data = typeof data;
 
 // HTTP handler
 export function handler(request: Request) {
@@ -86,30 +67,29 @@ export function handler(request: Request) {
 }
 ```
 
-### Client
+**`client.ts`**
 
 ```typescript
 import { deserializeResponse } from "async-streamify";
 import type { data } from "./server";
 
 const response = await fetch("http://localhost:8000");
-const result = await deserializeResponse<ReturnType<typeof data>>(response);
+const result = await deserializeResponse<ReturnType<data>>(response);
 
 // Values are received as they become available
-console.log(result.status); // "processing" (immediate)
+console.log(result.availability); // "immediate"
 
 result.promise.then((value) => {
-  console.log(value); // "completed" (after 100ms)
+  console.log(value); // "completed" (after 100ms + network latency)
 });
 
-// Streams work naturally
+// Async iterators retain their native behaviour
 for await (const num of result.stream) {
-  console.log(num); // 0, 1, 2, 3, 4, 5 (every 200ms)
+  console.log(num); // 0, 1, 2, 3 (streamed every 200ms)
 }
 
-// Nested values maintain their async behavior
-console.log(await result.nested.deepPromise); // "I'm deep!"
-for await (const num of result.nested.deepStream) {
+// Nested values work and stream as they resolve
+for await (const num of (await result.nested.iteratorInPromise)) {
   console.log(num); // 0, 1, 2, 3
 }
 ```
@@ -153,7 +133,6 @@ const serializer = new AsyncObjectSerializer(data);
 for await (const chunk of serializer) {
   // Send chunks over your transport
   // Each chunk is a JSON object that should be serialized
-  // and terminated with a newline for NDJSON format
 }
 
 const deserializedData = await deserialize<typeof data>(receivedStream);
@@ -161,27 +140,38 @@ const deserializedData = await deserialize<typeof data>(receivedStream);
 
 ## How It Works
 
-1. The server serializes objects into a stream of NDJSON chunks
-2. Each chunk contains either resolved values or references to pending async
-   operations
-3. Values are transmitted as soon as they become available
-4. The client reconstructs the object structure, maintaining async behaviors
-5. Backpressure is handled automatically through the streaming interface
+1. The server serializes objects into a stream objects that contains either
+   resolved values or references to pending async operations.
+2. Values are transmitted as soon as they become available (provided the stream
+   is ready for more, i.e., backpressure handling).
+3. The `AsyncResponse` and `deserializeResponse` helpers further serialize via
+   NDJSON (Newline Deliminited JSON) for HTTP streaming.
+4. The client "reassembles" the stream back into native objects, promises, async
+   iterables.
 
 ## Protocol Details
 
-The library uses NDJSON (Newline Delimited JSON) as its transport format. Each
-chunk is a valid JSON object terminated by a newline character. This format is:
+The serialized stream consists of the original root object on the first line,
+with any async instances being substituted with a unique index and being
+resolved on future lines with `[idx, value]`, i.e.:
 
-- Streamable: Each chunk can be processed independently
-- Self-delimiting: The newline character provides natural message boundaries
-- Human-readable: Easy to debug and inspect
-- Widely supported: Works with any text-based transport
+```typescript
+const object = { promise: sleep(100).then("resolved"; integers: integers(2) };
+console.log(await Array.fromAsync(new AsyncObjectSerializer(object)));
+[
+  { promise: { $promise: 1 }, integers: { $asyncIterable: 2 } },
+  [ 1, { $resolve: "resolved" } ],
+  [ 2, { value: 0, done: false }],
+  [ 2, { value: 1, done: false }],
+  [ 2, { value: 2, done: false }],
+  [ 2, { value: undefined, done: true }],
+]
+```
 
 ## Limitations
 
 - Async generators on the client yield as fast as the stream can handle, not
-  when explicitly requested
+  when explicitly requested on the client.
 - Because of how **promise chains** work, if you provide a promise as the only
   item to serialize, if you call `await reassemble(...)` you'll get the result
   or thrown error back, not a promise. To work around, simply nest it, e.g.
