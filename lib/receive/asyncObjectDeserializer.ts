@@ -148,12 +148,16 @@ export class AsyncObjectDeserializer<TTarget extends object> {
       }
     }
 
-    return Object.fromEntries(
-      Object.entries(serializedValue).map(([key, value]) => [
-        key,
-        this.deserializeValue(value as object),
-      ]),
-    );
+    if (serializedValue.constructor === Object) {
+      return Object.fromEntries(
+        Object.entries(serializedValue).map(([key, value]) => [
+          key,
+          this.deserializeValue(value as object),
+        ]),
+      );
+    }
+
+    return serializedValue;
   }
 }
 

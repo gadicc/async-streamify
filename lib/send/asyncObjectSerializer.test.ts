@@ -7,6 +7,12 @@ import transformIterable from "../util/transformIterable.ts";
 describe("send/asyncObjectSerializer", () => {
   addTimeout(5000);
 
+  it('doesn\'t serialize non-pure "objects", e.g. Dates', async () => {
+    const obj = new Date();
+    const arrOut = await Array.fromAsync(new AsyncObjectSerializer(obj));
+    expect(arrOut).toEqual([obj]);
+  });
+
   it("handle regular sync arrays", async () => {
     const arrIn = [1, 2, 3];
     const arrOut = await Array.fromAsync(new AsyncObjectSerializer(arrIn));

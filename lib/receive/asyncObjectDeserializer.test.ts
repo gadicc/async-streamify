@@ -15,6 +15,12 @@ function aifa(arr: Array<object>) {
 describe("receive/asyncObjectDeserializer", () => {
   addTimeout(5000);
 
+  it('doesn\'t try dserialize non-pure "objects", e.g. Dates', async () => {
+    const obj = new Date();
+    const result = await reassemble(aifa([obj]));
+    expect(result).toEqual(obj);
+  });
+
   it("handle regular sync arrays", async () => {
     const result = await reassemble(aifa([[1, 2, 3]]));
     expect(result).toEqual([1, 2, 3]);

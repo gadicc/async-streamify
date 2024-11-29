@@ -168,11 +168,15 @@ export class AsyncObjectSerializer<TSource = object>
       return { $asyncIterator: idx } as SerializedAsyncIterator;
     }
 
-    return Object.fromEntries(
-      Object.entries(value).map((
-        [key, val],
-      ) => [key, this.serializeValue(val)]),
-    );
+    if (value.constructor === Object) {
+      return Object.fromEntries(
+        Object.entries(value).map((
+          [key, val],
+        ) => [key, this.serializeValue(val)]),
+      );
+    }
+
+    return value;
   }
 }
 
