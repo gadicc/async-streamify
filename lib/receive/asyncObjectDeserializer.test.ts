@@ -3,6 +3,7 @@ import { expect } from "@std/expect";
 
 import reassemble from "./asyncObjectDeserializer.ts";
 import { addTimeout } from "../../tests/util.ts";
+import isAsyncIterable from "../util/isAsyncIteratable.ts";
 
 // Async Iterator From Array
 function aifa(arr: Array<object>) {
@@ -106,6 +107,22 @@ describe("receive/asyncObjectDeserializer", () => {
     );
     // @ts-expect-error: later
     expect(await Array.fromAsync(result.integers)).toEqual([1, 2, 3]);
+  });
+
+  it("reassembles async iterators nested inside a promise", async () => {
+    const result = await reassemble<Promise<AsyncIterable<number>>>(
+      aifa([
+        { "$promise": 1 },
+        [1, { $resolve: { "$asyncIterator": 2 } }],
+        [2, { done: false, value: 1 }],
+        [2, { done: false, value: 2 }],
+        [2, { done: false, value: 3 }],
+        [2, { done: true, value: undefined }],
+      ]),
+    );
+
+    console.log("result", result);
+    expect(isAsyncIterable(result)).toBe(true);
   });
 
   it("reassembles in order", async () => {

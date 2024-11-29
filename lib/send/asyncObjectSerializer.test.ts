@@ -75,6 +75,19 @@ describe("send/asyncObjectSerializer", () => {
     ]);
   });
 
+  it("handles async iterators nested inside a promise", async () => {
+    const obj = Promise.resolve(integers(3));
+    const arr = await Array.fromAsync(new AsyncObjectSerializer(obj));
+    expect(arr).toEqual([
+      { "$promise": 1 },
+      [1, { $resolve: { "$asyncIterator": 2 } }],
+      [2, { done: false, value: 1 }],
+      [2, { done: false, value: 2 }],
+      [2, { done: false, value: 3 }],
+      [2, { done: true, value: undefined }],
+    ]);
+  });
+
   it("handles nested async iterators, 1 level deep", async () => {
     const obj = {
       a: integers(3),

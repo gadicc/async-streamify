@@ -84,8 +84,9 @@ export class AsyncObjectDeserializer<TTarget extends object> {
 
       const promise = this.promises.get(id);
       if (promise) {
-        if ("$resolve" in value) promise.resolve(value["$resolve"]);
-        else if ("$reject" in value) {
+        if ("$resolve" in value) {
+          promise.resolve(this.deserializeValue(value["$resolve"]));
+        } else if ("$reject" in value) {
           promise.reject(errorKind.maybeDeserialize(value["$reject"]));
         } else {throw new Error(
             "Unexpected promise state: " + JSON.stringify(value),
@@ -119,7 +120,7 @@ export class AsyncObjectDeserializer<TTarget extends object> {
    * @param serializedValue - The serialized value to deserialize
    * @returns The deserialized value
    */
-  private deserializeValue<I extends object>(serializedValue: I): unknown {
+  private deserializeValue<T>(serializedValue: T): T | unknown {
     // Return primitives as-is: null, undefined, numbers, strings, etc.
     if (typeof serializedValue !== "object" || serializedValue === null) {
       return serializedValue;
