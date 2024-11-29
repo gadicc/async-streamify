@@ -120,9 +120,23 @@ describe("receive/asyncObjectDeserializer", () => {
         [2, { done: true, value: undefined }],
       ]),
     );
-
-    console.log("result", result);
     expect(isAsyncIterable(result)).toBe(true);
+  });
+
+  it("reassembles promises inside of async iterator results", async () => {
+    const result = await reassemble<
+      AsyncIterable<{ promise: Promise<number> }>
+    >(
+      aifa([
+        { "$asyncIterator": 1 },
+        [1, { done: false, value: { promise: { $promise: 2 } } }],
+        [2, { $resolve: "resolved" }],
+        [1, { done: true, value: undefined }],
+      ]),
+    );
+    expect(isAsyncIterable(result)).toBe(true);
+    const results = await Array.fromAsync(result);
+    expect(results[0].promise).resolves.toBe("resolved");
   });
 
   it("reassembles in order", async () => {
