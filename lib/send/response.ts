@@ -1,7 +1,9 @@
 import AsyncObjectSerializer from "./asyncObjectSerializer.ts";
+import transformIterable from "../util/transformIterable.ts";
 
 export type AsyncObjectSerializerOptions = {
-  transformers?: ((value: unknown) => string)[];
+  // deno-lint-ignore no-explicit-any
+  transformers?: ((value: unknown) => any)[];
 };
 
 /**
@@ -50,33 +52,21 @@ export class AsyncResponse extends Response {
       opts.transformers = [JSON.stringify];
     }
 
+    // This final transformer add newlines (for NDJSON) and encodes to bytes
+    const encoder = new TextEncoder();
+    opts.transformers.push((value) => encoder.encode(value + "\n"));
+
+    const transform = (chunk: unknown) =>
+      opts.transformers!.reduce(
+        (acc, cur) => acc = cur(acc),
+        chunk,
+      ) as Uint8Array;
+
     const serializer = new AsyncObjectSerializer(body);
 
-    // Create a ReadableStream that serializes the object and encodes it as NDJSON
-    const stream = new ReadableStream({
-      async start(controller: ReadableStreamDefaultController) {
-        const encoder = new TextEncoder();
-        try {
-          for await (const chunk of serializer) {
-            const transformed = opts.transformers!.reduce(
-              (acc, cur) => acc = cur(acc),
-              chunk,
-            );
-
-            if (typeof transformed !== "string") {
-              throw new Error(
-                "Final transformer in array must return a JSON string, not " +
-                  typeof transformed + ": " + JSON.stringify(transformed),
-              );
-            }
-
-            controller.enqueue(encoder.encode(transformed + "\n"));
-          }
-        } finally {
-          controller.close();
-        }
-      },
-    });
+    const stream = ReadableStream.from(
+      transformIterable(serializer, transform),
+    );
 
     // Initialize the response with the stream and NDJSON content type
     super(
