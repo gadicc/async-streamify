@@ -1,5 +1,9 @@
 import AsyncObjectSerializer from "./asyncObjectSerializer.ts";
 
+export type AsyncObjectSerializerOptions = {
+  transformers?: ((value: unknown) => string)[];
+};
+
 /**
  * Extends the standard Response class to support streaming serialized objects
  * using AsyncObjectSerializer. The response is formatted as newline-delimited JSON (NDJSON).
@@ -32,10 +36,18 @@ export class AsyncResponse extends Response {
    * @param body - The object to serialize and stream, or null for an empty response
    * @param init - Standard ResponseInit options
    */
-  constructor(body: object | null, init: ResponseInit = {}) {
+  constructor(
+    body: object | null,
+    init: ResponseInit = {},
+    opts: AsyncObjectSerializerOptions = {},
+  ) {
     if (body === null) {
       super(null, init);
       return;
+    }
+
+    if (!opts.transformers) {
+      opts.transformers = [JSON.stringify];
     }
 
     const serializer = new AsyncObjectSerializer(body);
@@ -46,7 +58,19 @@ export class AsyncResponse extends Response {
         const encoder = new TextEncoder();
         try {
           for await (const chunk of serializer) {
-            controller.enqueue(encoder.encode(JSON.stringify(chunk) + "\n"));
+            const transformed = opts.transformers!.reduce(
+              (acc, cur) => acc = cur(acc),
+              chunk,
+            );
+
+            if (typeof transformed !== "string") {
+              throw new Error(
+                "Final transformer in array must return a JSON string, not " +
+                  typeof transformed + ": " + JSON.stringify(transformed),
+              );
+            }
+
+            controller.enqueue(encoder.encode(transformed + "\n"));
           }
         } finally {
           controller.close();

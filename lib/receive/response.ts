@@ -27,14 +27,28 @@ import { deserialize } from "./asyncObjectDeserializer.ts";
  */
 export function deserializeResponse<T extends object>(
   response: Response,
+  // deno-lint-ignore no-explicit-any
+  opts: { transformers?: ((value: any) => object)[] } = {},
 ): Promise<T> {
   if (!response.body) {
     throw new Error("Response body is null");
   }
 
+  if (!opts.transformers) {
+    opts.transformers = [JSON.parse];
+  }
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+
+  function transform(chunk: unknown) {
+    const transformed = opts.transformers!.reduce(
+      (acc, cur) => acc = cur(acc),
+      chunk,
+    ) as object;
+    return transformed;
+  }
 
   /**
    * Generator that reads the response stream and yields parsed JSON objects
@@ -52,14 +66,15 @@ export function deserializeResponse<T extends object>(
 
         for (const line of lines) {
           if (line.trim()) {
-            yield JSON.parse(line);
+            yield transform(line);
           }
         }
       }
 
       const remaining = decoder.decode();
       if (remaining.trim()) {
-        yield JSON.parse(remaining);
+        console.log("remainig");
+        yield transform(remaining);
       }
     } finally {
       reader.releaseLock();
