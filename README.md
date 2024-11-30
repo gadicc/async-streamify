@@ -138,6 +138,10 @@ for await (const chunk of serializer) {
 const deserializedData = await deserialize<typeof data>(receivedStream);
 ```
 
+For a full implementation example (for Response types with NDSON), see
+[send/response.ts](./lib/send/response.ts) and
+[receive/response.ts](./lib/receive/response.ts).
+
 ## How It Works
 
 1. The server serializes objects into a stream objects that contains either
