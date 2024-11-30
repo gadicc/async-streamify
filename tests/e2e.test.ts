@@ -29,4 +29,19 @@ describe("tests/e2e", () => {
 
     expect(output).toEqual([1, "resolved", 2, 3]);
   });
+
+  it("custom transformers", async () => {
+    const data = { a: 1 };
+    const response = new AsyncResponse(data, undefined, {
+      transformers: [
+        (x) => JSON.stringify(x) + "!",
+      ],
+    });
+    const result = await deserializeResponse<typeof data>(response, {
+      transformers: [
+        (x) => JSON.parse(x.slice(0, -1)),
+      ],
+    });
+    expect(result).toEqual(data);
+  });
 });
